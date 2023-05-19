@@ -1,0 +1,2 @@
+cylinder_robot
+-DCATKIN_DEVEL_PREFIX=/home/wzj/ROS_ws/KC4E_ws/devel -DCMAKE_INSTALL_PREFIX=/home/wzj/ROS_ws/KC4E_ws/install -G Unix Makefiles
