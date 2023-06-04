@@ -154,7 +154,7 @@ class Localization(object):
         _y = y[0][1]
         _tmp1=10-3/8*(3*_x+_y)
         _tmp2=3*(_tmp1-5+_x)-5
-        y = [[_tmp1],[_tmp2]]
+        y = [[_tmp1+0.01],[_tmp2+0.03]]
         
         # call observe moment function in Kalman filter
         self.kf.observe_moment(y,current_time)

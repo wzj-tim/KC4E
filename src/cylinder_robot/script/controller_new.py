@@ -71,9 +71,9 @@ def controller():
     # speedControllerX = PID_Controller(20,0,0,-200,200)
     # positionControllerX = PID_Controller(1,0,1,-50,50)
     speedControllerX = PID_Controller(8,0,0,-300,300)
-    positionControllerX = PID_Controller(1.2,0,2,-50,50)
+    positionControllerX = PID_Controller(1.0,0,2,-20,20)
     speedControllerY = PID_Controller(8,0,0,-300,300)
-    positionControllerY = PID_Controller(1.2,0,2,-50,50)
+    positionControllerY = PID_Controller(1.0,0,2,-20,20)
 
     state = 0
 
@@ -111,26 +111,27 @@ def controller():
 
         twist = Twist()
 
-        curPose = np.array([position_x_esti, position_y_esti])
-        expPath = np.array([target[0]-lastTarget[0], target[1]-lastTarget[1]])
-        pathNorm_ = np.linalg.norm(expPath)
-        verticalVect = np.array([-expPath[1],expPath[0]])/pathNorm_
-        totalError = np.array([target[0]-curPose[0], target[1]-curPose[1]])
-        paraError = (np.dot(expPath,totalError))/pathNorm_/pathNorm_ * expPath
-        vertError = totalError - paraError
+        # 下面一段代码中，末尾带有下划线'_'的变量为标量，其他为矢量
+        curPose = np.array([position_x_esti, position_y_esti]) # 当前位置，来自perception的估计
+        expPath = np.array([target[0]-lastTarget[0], target[1]-lastTarget[1]]) # 期望轨迹向量，下一个轨迹点与前一个轨迹点的矢量差
+        pathNorm_ = np.linalg.norm(expPath) # 期望轨迹的常数，用于归一化
+        verticalVect = np.array([-expPath[1],expPath[0]])/pathNorm_ # 定义（0,0,1）与（x,y,0）的叉积为垂直方向的正方向
+        totalError = np.array([target[0]-curPose[0], target[1]-curPose[1]]) # 计算距离误差
+        paraError = (np.dot(expPath,totalError))/pathNorm_/pathNorm_ * expPath # 平行于轨迹线的位置误差矢量分量
+        vertError = totalError - paraError # 垂直于轨迹线的位置误差矢量分量
 
-        totalSpeed = [velocity_x_esti, velocity_y_esti]
-        paraSpeed = (np.dot(expPath,totalSpeed))/pathNorm_/pathNorm_ * expPath
-        vertSpeed = totalSpeed - paraSpeed
+        totalSpeed = [velocity_x_esti, velocity_y_esti] # 来自perception的速度估计量
+        paraSpeed = (np.dot(expPath,totalSpeed))/pathNorm_/pathNorm_ * expPath # 平行于轨迹线的速度矢量分量
+        vertSpeed = totalSpeed - paraSpeed # 垂直于轨迹线的速度矢量分量
 
-        paraExpSpd_ = positionControllerX.get_output(np.dot(paraError,expPath))
-        paraForce_ = speedControllerX.get_output(paraExpSpd_ - np.dot(paraSpeed,expPath))
+        paraExpSpd_ = positionControllerX.get_output(np.dot(paraError,expPath)) # 平行轨迹矢量方向的外环PID
+        paraForce_ = speedControllerX.get_output(paraExpSpd_ - np.dot(paraSpeed,expPath)) # 平行轨迹矢量方向的内环PID
 
         print(paraError,paraSpeed)
-        vertExpSpd_ = positionControllerY.get_output(np.dot(vertError,verticalVect))
-        vertForce_ = speedControllerY.get_output(vertExpSpd_ - np.dot(vertSpeed,verticalVect))
+        vertExpSpd_ = positionControllerY.get_output(np.dot(vertError,verticalVect)) # 垂直轨迹矢量方向的外环PID
+        vertForce_ = speedControllerY.get_output(vertExpSpd_ - np.dot(vertSpeed,verticalVect)) # 垂直轨迹矢量方向的内环PID
 
-        totalForce = paraForce_ /pathNorm_ * expPath + vertForce_ * verticalVect
+        totalForce = paraForce_ /pathNorm_ * expPath + vertForce_ * verticalVect # 将两个PID输出分量进行矢量相加，得到控制器输出矢量
 
         twist.linear.x = totalForce[0]
         twist.linear.y = totalForce[1]
@@ -146,14 +147,14 @@ def controller():
         # twist.linear.y = speedControllerY.get_output(yspdErr)
         # print("dir:{},expPos:{:.2f},realPos:{:2.2f},posErr:{:2.2f},expSpd:{:2.2f},realSpd:{:2.2f},spdErr:{:2.2f},force:{:2.2f}".format(direction,target,position_x_esti,posError,expSpd,velocity_x_esti,spdErr,twist.linear.x))
 
-        if abs(xposError)<0.02 and abs(yposError)<0.02:
+        if abs(xposError)<0.02 and abs(yposError)<0.02: # 两轴位置误差均小于0.02且保持0.3s后认为到达期望位置，随后更新期望轨迹
             target_cnt = target_cnt+1
         else:
             target_cnt = 0
 
-        if target_cnt > 3:
+        if target_cnt > 30:
             lastTarget = targets[target_idx]
-            target_idx = (target_idx+1)%4
+            target_idx = (target_idx+1)%len(targets)
             target = targets[target_idx]
 
         pub.publish(twist)
