@@ -66,14 +66,14 @@ def controller():
 
     rospy.Subscriber("/robot/esti_model_state", ModelState, callback_getting_esti)
     #============design your trace below=============
-    rate = rospy.Rate(10)
+    rate = rospy.Rate(100)
 
     # speedControllerX = PID_Controller(20,0,0,-200,200)
     # positionControllerX = PID_Controller(1,0,1,-50,50)
     speedControllerX = PID_Controller(8,0,0,-300,300)
-    positionControllerX = PID_Controller(1.2,0,1,-50,50)
+    positionControllerX = PID_Controller(1.2,0,2,-50,50)
     speedControllerY = PID_Controller(8,0,0,-300,300)
-    positionControllerY = PID_Controller(1.2,0,1,-50,50)
+    positionControllerY = PID_Controller(1.2,0,2,-50,50)
 
     state = 0
 
@@ -83,7 +83,7 @@ def controller():
     targets = [[3,3],[-4,0],[3,-3],[0,0]]
     target_idx = 0
     target_cnt = 0
-    waitCounter = 30
+    waitCounter = 300
     while 1:
 
         if(waitCounter>0): # initialize, wait for the observed value to become stable
